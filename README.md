@@ -1,6 +1,6 @@
-<center>
+<p align=center>
 <img src="https://github.com/Zaky202/kagsa/blob/main/kagsa-web-logo.png?raw=true" width="300">
-</center>
+</p>
 <h1 align="center">KAGSA WEB Framework</h1>
 
 [KAGSA](https://github.com/kagsa/kagsa) Web is a framework for front-end development, using tags within HTML, read the [QuickStart](#quickstart) and [Document](#document) below.
