@@ -1,0 +1,2 @@
+write "Hi"
+<class 'TestError'> : testing error.log
