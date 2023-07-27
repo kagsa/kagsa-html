@@ -9,14 +9,17 @@ KAGSA HTML is a framework that allows you to use the KAGSA language codes within
 
 To get started with KAGSA HTML, follow these simple steps:
 
-1. Install `kagsa.js` and `kagsa.css` or import them directly from the GitHub file raw.
+1. Prepare your KAGSA HTML Server.
+
+2. Install `kagsa.js` and `kagsa.css` or import them directly from the GitHub file raw then set your server.
    
 ```html
 <link rel="stylesheet" href="kagsa.css">
 <script src="kagsa.js"></script>
+<script>set_kagsa_server('http://127.0.0.1:5000')</script>
 ```
 
-2. Use the `kagsa` tag to start writing KAGSA codes inside your HTML.
+3. Use the `kagsa` tag to start writing KAGSA codes inside your HTML.
 
 ```html
 <kagsa>
