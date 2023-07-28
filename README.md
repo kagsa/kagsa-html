@@ -31,4 +31,4 @@ That's it! You are now ready to use the power of KAGSA within your front-end dev
 
 ## Documentation
 
-You can learn all the functions and commands of the HTML library in [KAGSA.ORG](https://www.kagsa.org/docs/kagsa-html/)
+You can learn all the functions and commands of the HTML library in [KAGSA.ORG](https://www.kagsa.org/docs/kagsa-html/) or [DOC.md](https://github.com/kagsa/kagsa-html/blob/main/DOC.md)

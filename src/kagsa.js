@@ -1,70 +1,92 @@
 /*
-KAGSA Programming Language Web Framework
+KAGSA Programming Language HTML data
 */
 
+var SERVER = ''
 
-/*
-This Function is help to :
--  read all the input elements
--  create a sample framework for html
-*/
-const SERVER = 'https://kagsa.pythonanywhere.com/run/'
+// set the kagsa server using the base url 
+// ex : https://server-kagsa.com
+// ex : https://server-kagsa.com/index.php
+var set_kagsa_server = (URL) => {
+    if (URL.includes('?') || URL.includes('code=')) {
+        console.error('kagsa.js: error: use only base url or the path to set the server')
+    }
+    else {
+        SERVER = URL
+    }
+}
 
-
-var scriptsList = []
-var build = (inputs) => {
-    var framework = ''
+// read input html tags and write them as a kagsa code.
+// inputs : str -> "input1, input2, .."
+var read_inputs = (inputs) => {
+    function canElementContainText(tagname) {
+        try {
+            var e = document.createElement(tagname);
+            if (e.outerHTML.indexOf("/") != -1)
+                return 'true'
+            else return 'false'
+        } catch (ex) {
+            return 'false';
+        }
+    }
+    var data = ''
     inputs = inputs.split(',')
     inputs.forEach(element => {
         elementName = element.replaceAll('"','\\"').trim()
         element = Array.from(document.querySelectorAll(element))
-        // if the input is id
+        // input is nothing
         if (element.length == 0) {
             // nothing
         }
+        // input is id selector
         else if (element.length == 1){
-            // get element and add it to kagsa code 
             tag = element[0]
-            framework += 'Web.inputs.set("' + elementName + '", Web.HTMLElement( "' + btoa(tag.innerHTML) + '" , "' + btoa(tag.outerHTML) + '" ))\n'
-            
-            // if there "value" in tag add it
+            attributeNodeArray = [...tag.attributes];
+            attrs = attributeNodeArray.reduce((attrs, attribute) => {
+                attrs[attribute.name] = attribute.value;
+                return attrs;
+            }, {});
+
             if (tag.value != undefined) {
-                framework += 'Web.inputs.get("' + elementName + '").value = "' + tag.value.replaceAll('"','\\"') + '"\n'
+                attrs['value'] = tag.value;
             }
 
-            // add all attrs to kagsa html element
-            tag.getAttributeNames().forEach(attr => {
-                framework += 'Web.inputs.get("' + elementName + `").${attr} = "` + tag.getAttribute(attr).replaceAll('"','\\"') + '"\n'
-            });
-        // if the inputs is class
-        }else{
-            framework += 'Web.inputs.set("' + elementName + '", list())\n'
-            // read all elements by class
+            data += 'HTML.inputs.set("' + elementName + '", HTML.Element( "' + tag.tagName.toLowerCase() + '" , "' + tag.innerHTML + '" ,canContainText=' + canElementContainText(tag.tagName.toLowerCase()) + ', **JSON.toDict(\'' + JSON.stringify(attrs) + '\') ))\n'
+            
+        }
+        // input is class selector
+        else{
+            data += 'HTML.inputs.set("' + elementName + '", list())\n'
             element.forEach(tag => {
-                framework += 'Web.inputs.get("' + elementName + '").append( Web.HTMLElement( "' + btoa(tag.innerHTML) + '" , "' + btoa(tag.outerHTML) + '" ))\n'
+                attributeNodeArray = [...tag.attributes];
+                attrs = attributeNodeArray.reduce((attrs, attribute) => {
+                    attrs[attribute.name] = attribute.value;
+                    return attrs;
+                }, {});
 
-                    // if there "value" in tag add it
                 if (tag.value != undefined) {
-                    framework += 'Web.inputs.get("' + elementName + '").get(-1).value = "' + tag.value.replaceAll('"','\\"') + '"\n'
+                    attrs['value'] = tag.value;
                 }
+                data += 'HTML.inputs.get("' + elementName + '").append( HTML.Element( "' + tag.tagName.toLowerCase() + '" , "' + tag.innerHTML + '" ,canContainText=' + canElementContainText(tag.tagName.toLowerCase()) +', **JSON.toDict(\'' + JSON.stringify(attrs) + '\') ))\n'
 
-                // add all attrs to kagsa html element
-                tag.getAttributeNames().forEach(attr => {
-                    framework += 'Web.inputs.get("' + elementName + `").get(-1).${attr} = "` + tag.getAttribute(attr).replaceAll('"','\\"') + '"\n'
-                });
             });
-        // if not class or id
         }
     });
-    return framework;
+    return data;
 }
 
-// encode the kagsa codes with base64 and make request to compiler
-var runKAGSA = (codes,tag) => {
-    codes = btoa(codes)
+// send kagsa codes as requests to the server.
+// codes : the kagsa lines.
+// tag   : the current <kagsa> tag.
+var request_server = (codes,tag) => {
+    new_codes = ''
+    codes.split('\n').forEach(line => {
+        new_codes += line.trimLeft() + '\n'
+    })
+    codes = encodeURIComponent(new_codes)
 
     let xhr = new XMLHttpRequest();
-    xhr.open('GET', `${SERVER}${codes}`, true);
+    xhr.open('GET', `${SERVER}?code=${codes}`, true);
 
     xhr.onload = () => {
         let status = xhr.status;
@@ -74,34 +96,35 @@ var runKAGSA = (codes,tag) => {
                 console.error('kagsa.js: error: cannot make request.\nerror: server error, try to check your codes')
             }
             else{
-                data = JSON.parse(xhr.responseText)
+                data = xhr.responseText
+                var scriptsList = []
                 reg = /&lt;scrip(.*?)&gt;(.*?|\n)*&lt;\/script&gt;/
                 while (true) {
                     try {
-                        var scriptTag = data.code.match(reg)[0]
+                        var scriptTag = data.match(reg)[0]
                     }catch(err){
-                        //console.log('data.code  : '+data.code)
+                        //console.log('data  : '+data)
                         break
                     }
                     scriptTagAsText = scriptTag
                     scriptTag = scriptTag.replaceAll('&lt;','<').replaceAll('&gt;','>')
                     if (!scriptsList.includes(scriptTag)) scriptsList.push(scriptTag)
-                    data.code = data.code.replace(scriptTagAsText,'')
+                    data = data.replace(scriptTagAsText,'')
                 }
                 reg2 = /<scrip(.*?)>(.*?|\n)*<\/script>/
                 while (true) {
                     try {
-                        var scriptTag = data.code.match(reg2)[0]
+                        var scriptTag = data.match(reg2)[0]
                     }catch(err){
-                        //console.log('data.code  : '+data.code)
+                        //console.log('data  : '+data)
                         break
                     }
                     scriptTagAsText = scriptTag
                     scriptTag = scriptTag.replaceAll('&lt;','<').replaceAll('&gt;','>')
                     if (!scriptsList.includes(scriptTag)) scriptsList.push(scriptTag)
-                    data.code = data.code.replace(scriptTagAsText,'')
+                    data = data.replace(scriptTagAsText,'')
                 }
-                if (data.code.replaceAll(' ','').replaceAll('\n','') != '') tag.outerHTML = tag.outerHTML + `<span class="kagsa_output" state="${ data.state }">${ data.code }</span>`;
+                if (data.replaceAll(' ','').replaceAll('\n','') != '') tag.outerHTML = tag.outerHTML + `<span class="kagsa">${ data }</span>`;
                 scriptsList.forEach(sc => {
                     document.body.appendChild(
                         document.createRange().createContextualFragment(sc)
@@ -124,23 +147,16 @@ var runKAGSA = (codes,tag) => {
     }
     
     xhr.send();
-    //$.ajax({
-    //    type: "GET",
-    //    url: `https://kagsa.pythonanywhere.com/run/${codes}`
-    //}).done(function (data) {
-        
-    //});
-    //tag.outerHTML = tag.outerHTML + '<span class="kagsa_output">' + html + '</span>';
     
 }
 
-// js func to run a kagsa tag
+// js func to run a <kagsa> tag using selector.
 var kagsa = (selector) => {
     var tag = document.querySelector(selector)
     var codes = ''
-    if (tag.getAttribute('inputs') != undefined) { codes = codes + build(tag.getAttribute('inputs')) }
+    if (tag.getAttribute('inputs') != undefined) { codes = read_inputs(tag.getAttribute('inputs')) }
     codes += ( '\n' + tag.innerHTML )
-    runKAGSA(codes,tag) 
+    request_server(codes,tag) 
 }
 
 window.addEventListener('load', () => {
@@ -153,11 +169,11 @@ window.addEventListener('load', () => {
         if (RUN) {
             var codes = ''
             // if there a inputs read them
-            if (tag.getAttribute('inputs') != undefined) { codes = codes + build(tag.getAttribute('inputs')) }
+            if (tag.getAttribute('inputs') != undefined) { codes = codes + read_inputs(tag.getAttribute('inputs')) }
             // read the codes from the tag
             codes += ( '\n' + tag.innerHTML )
             // run
-            runKAGSA(codes,tag)
+            request_server(codes,tag)
         }
     });
 },false);
